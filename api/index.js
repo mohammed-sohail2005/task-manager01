@@ -32,20 +32,27 @@ app.use(async (req, res, next) => {
   }
 });
 
-// API Health Check & Test
-const healthCheckHandler = (req, res) => {
+// API Health Check & Debug Endpoint
+app.get(['/api/health', '/health', '/api/test', '/test'], (req, res) => {
   res.json({
     status: 'OK',
     message: 'Task Manager API is running smoothly on Vercel',
+    url: req.url,
+    originalUrl: req.originalUrl,
     timestamp: new Date().toISOString(),
   });
-};
+});
 
-app.get(['/api/health', '/health', '/api/test', '/test'], healthCheckHandler);
+// Mount routes for both local (/api/...) and Vercel serverless rewrites (/...)
+app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
 
-// Multi-prefix route matching for local & Vercel serverless rewrites
-app.use(['/api/auth', '/auth'], authRoutes);
-app.use(['/api/tasks', '/tasks'], taskRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/tasks', taskRoutes);
+
+// Fallback mounts so any Vercel URL rewrite (/login, /register, etc.) is caught
+app.use('/', authRoutes);
+app.use('/', taskRoutes);
 
 // Error Middleware
 app.use(notFound);

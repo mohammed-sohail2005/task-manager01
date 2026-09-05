@@ -20,7 +20,7 @@ app.use(express.json());
 
 // Ensure MongoDB is connected before handling any API requests
 app.use(async (req, res, next) => {
-  if (req.path === '/api/health' || req.path === '/health') return next();
+  if (req.path.includes('/health') || req.path.includes('/test')) return next();
   try {
     await connectDB();
     next();
@@ -32,24 +32,20 @@ app.use(async (req, res, next) => {
   }
 });
 
-// API Health Check
+// API Health Check & Test
 const healthCheckHandler = (req, res) => {
   res.json({
     status: 'OK',
-    message: 'Task Manager API is running smoothly',
+    message: 'Task Manager API is running smoothly on Vercel',
     timestamp: new Date().toISOString(),
   });
 };
 
-app.get('/api/health', healthCheckHandler);
-app.get('/health', healthCheckHandler);
+app.get(['/api/health', '/health', '/api/test', '/test'], healthCheckHandler);
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/auth', authRoutes);
-
-app.use('/api/tasks', taskRoutes);
-app.use('/tasks', taskRoutes);
+// Multi-prefix route matching for local & Vercel serverless rewrites
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/tasks', '/tasks'], taskRoutes);
 
 // Error Middleware
 app.use(notFound);

@@ -2,8 +2,18 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from '../backend/config/db.js';
-import authRoutes from '../backend/routes/authRoutes.js';
-import taskRoutes from '../backend/routes/taskRoutes.js';
+import { registerUser, loginUser, getMe } from '../backend/controllers/authController.js';
+import {
+  getTasks,
+  getTaskById,
+  createTask,
+  updateTask,
+  deleteTask,
+  deleteCompletedTasks,
+  toggleTaskStatus,
+  getTaskStats,
+} from '../backend/controllers/taskController.js';
+import { protect } from '../backend/middleware/authMiddleware.js';
 import { notFound, errorHandler } from '../backend/middleware/errorMiddleware.js';
 
 dotenv.config();
@@ -43,16 +53,22 @@ app.get(['/api/health', '/health', '/api/test', '/test'], (req, res) => {
   });
 });
 
-// Mount routes for both local (/api/...) and Vercel serverless rewrites (/...)
-app.use('/api/auth', authRoutes);
-app.use('/auth', authRoutes);
+// Auth Routes (Explicit endpoints to ensure match regardless of Vercel path rewrites)
+app.post(['/api/auth/register', '/auth/register', '*/register'], registerUser);
+app.post(['/api/auth/login', '/auth/login', '*/login'], loginUser);
+app.get(['/api/auth/me', '/auth/me', '*/me'], protect, getMe);
 
-app.use('/api/tasks', taskRoutes);
-app.use('/tasks', taskRoutes);
+// Task Routes (Explicit endpoints)
+app.get(['/api/tasks/stats/summary', '/tasks/stats/summary', '*/stats/summary'], protect, getTaskStats);
+app.delete(['/api/tasks/completed/all', '/tasks/completed/all', '*/completed/all'], protect, deleteCompletedTasks);
 
-// Fallback mounts so any Vercel URL rewrite (/login, /register, etc.) is caught
-app.use('/', authRoutes);
-app.use('/', taskRoutes);
+app.get(['/api/tasks', '/tasks', '*/tasks'], protect, getTasks);
+app.post(['/api/tasks', '/tasks', '*/tasks'], protect, createTask);
+
+app.get(['/api/tasks/:id', '/tasks/:id', '*/tasks/:id'], protect, getTaskById);
+app.put(['/api/tasks/:id', '/tasks/:id', '*/tasks/:id'], protect, updateTask);
+app.delete(['/api/tasks/:id', '/tasks/:id', '*/tasks/:id'], protect, deleteTask);
+app.patch(['/api/tasks/:id/toggle', '/tasks/:id/toggle', '*/tasks/:id/toggle'], protect, toggleTaskStatus);
 
 // Error Middleware
 app.use(notFound);
